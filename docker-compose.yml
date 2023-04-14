@@ -2,8 +2,8 @@ version: '3.8'
 services:
     laravel.test:
         build:
-            context: ./vendor/laravel/sail/runtimes/8.2
-            dockerfile: Dockerfile
+            context: .
+            dockerfile: nginx.dockerfile
             args:
                 WWWGROUP: '${WWWGROUP}'
         image: sail-8.2/app
@@ -18,17 +18,18 @@ services:
             XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
             XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
         volumes:
-            - '.:/var/www/html'
+            - './src:/var/www/html:delegated'
         networks:
             - sail
         depends_on:
             - mysql
+            - phpmyadmin
             - redis
             - meilisearch
             - mailpit
             - selenium
     mysql:
-        image: 'mysql/mysql-server:8.0'
+        image: 'mysql:8.0'
         ports:
             - '${FORWARD_DB_PORT:-3306}:3306'
         environment:
@@ -39,8 +40,8 @@ services:
             MYSQL_PASSWORD: '${DB_PASSWORD}'
             MYSQL_ALLOW_EMPTY_PASSWORD: 1
         volumes:
-            - 'sail-mysql:/var/lib/mysql'
-            - './vendor/laravel/sail/database/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh'
+            - './mysql:/var/lib/mysql'
+            - './src/vendor/laravel/sail/database/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh'
         networks:
             - sail
         healthcheck:
@@ -51,6 +52,22 @@ services:
                 - '-p${DB_PASSWORD}'
             retries: 3
             timeout: 5s
+
+    phpmyadmin:
+    depends_on:
+      - mysql
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin_authentication_pwl
+    restart: always
+    ports:
+      - 8076:80
+    environment:
+      PMA_HOST: authentication_pwl
+      MYSQL_ROOT_PASSWORD: secret
+      UPLOAD_LIMIT: 10000M
+    networks:
+      - laravel
+
     redis:
         image: 'redis:alpine'
         ports:
