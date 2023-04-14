@@ -1,0 +1,5 @@
+.DS_Store
+.idea
+mongo/
+mysql/
+docker-compose.yml
